@@ -7,7 +7,9 @@ urlpatterns = [
     path("team/", TeamCrudView.as_view(), name="project-add-team"),
     path("team/<str:keys>", TeamCrudView.as_view(), name="project-team"),
     path("all-list-pagination/", AllProjectForUser.as_view(), name="all-project-pagination"),
+    path("Team-all-list-pagination/<id>", AllProjectForTeamUser.as_view(), name="Team-all-project-pagination"),
     path("all-list/", AllProjectForUserWOP.as_view(), name="all-project"),
     path("custom-project-list/", CustomProjectForUser.as_view(), name="custom-all-project"),
+    path("project-by-name/<tx>", ProjectByName.as_view(), name="project-by-name"),
     path("work/<str:keys>", ProjectIssueView.as_view(), name="project-issue")
 ]

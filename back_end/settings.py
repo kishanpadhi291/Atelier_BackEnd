@@ -31,7 +31,10 @@ DEBUG = True
 
 # ALLOWED_HOSTS = ["*"]
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Replace with your frontend origin
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "http://localhost:3001",
 ]
 
 # Application definition

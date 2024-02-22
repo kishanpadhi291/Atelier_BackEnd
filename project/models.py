@@ -4,6 +4,7 @@ class Project(models.Model):
     title = models.CharField(max_length=30)
     key = models.CharField(max_length=10)
     description = models.TextField()
+    github=models.CharField(max_length=1000)
     start_date = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User,related_name="projects",on_delete=models.CASCADE)
 
@@ -17,8 +18,3 @@ class Team(models.Model):
     role = models.ForeignKey(Role,related_name="role",on_delete=models.CASCADE)
 
 
-class StaredProjects(models.Model):
-    project = models.ForeignKey(Project,related_name="project",on_delete=models.CASCADE)
-    user = models.ForeignKey(User,related_name="likedBy",on_delete=models.CASCADE)
-    created_date = models.DateTimeField(
-        auto_now_add=True, blank=True, null=True)

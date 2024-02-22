@@ -1,35 +1,47 @@
 import json
 import random
+
+import vonage
 from django.core.mail import send_mail
 import requests
 from django.db.models import Q
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,AllowAny
 from rest_framework.views import APIView, Response, status
 from rest_framework import generics
-from user.serializer import UserListSerializer, ProfileAvtarSerializer, UserProfileSerializer
-from user.models import User, Avtar
+from .serializer import UserListSerializer, ProfileAvtarSerializer, UserProfileSerializer
+from .models import User, Avtar
 from issue.issueSerializer import GroupViseIssueSerializer
 from .utils import *
 from django.conf import settings
 
 
 class OtpGeneration(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         otp = generateotp()
-        subject = 'Otp Verification Atelier'
-        body = f'Otp to create a temporary password:- {otp}'
+        subject = 'Atelier Verification'
+        body = f'Atelier Verification Forgot Password Otp:- {otp}'
         if User.objects.filter(Q(email=request.data['identifier']) | Q(phoneNumber=request.data['identifier'])).exists():
             user = User.objects.filter(Q(email=request.data['identifier']) | Q(phoneNumber=request.data['identifier']))[0]
             user.otp = otp
             user.save()
             print(user.fullName,body)
-            # send_mail(
-            #     subject,
-            #     body,
-            #     settings.EMAIL_HOST_USER,
-            #     [user.email],
-            #     fail_silently=False,
+            # client = vonage.Client(key="252e28e8", secret="1jVd3jtbkUBCBqVJ")
+            # sms = vonage.Sms(client)
+            # sms.send_message(
+            #     {
+            #         "from": "Vonage APIs",
+            #         "to": "91"+user.phoneNumber,
+            #         "text": body,
+            #     }
             # )
+            send_mail(
+                subject,
+                body,
+                settings.EMAIL_HOST_USER,
+                [user.email],
+                fail_silently=False,
+            )
             return Response({'detail': 'otp generated successfully'}, status=status.HTTP_200_OK)
         else:
             return Response({'detail': 'No active account with the given Email'},
@@ -48,13 +60,22 @@ class OtpVerification(APIView):
         if User.objects.filter(Q(email=request.data['identifier']) | Q(phoneNumber=request.data['identifier'])).exists():
             user = User.objects.filter(Q(email=request.data['identifier']) | Q(phoneNumber=request.data['identifier']))[0]
             if user.otp == request.data['otp']:
-                password = generatepassword()
-                print(password)
-                user.set_password(password)
-                user.save()
-                print(user.check_password(password))
-                print(user.fullName)
-                print('verified')
+                # password = generatepassword()
+                # print(password)
+                # user.set_password(password)
+                # user.save()
+                # print(user.check_password(password))
+                # print(user.fullName)
+                # print('verified')
+                # subject = 'Otp Verification Atelier'
+                # body = f'Temporary password:- {password}'
+                # send_mail(
+                #     subject,
+                #     body,
+                #     settings.EMAIL_HOST_USER,
+                #     [user.email],
+                #     fail_silently=False,
+                # )
                 return Response({'detail': 'otp verified'}, status=status.HTTP_200_OK)
             else:
                 return Response({'detail': 'Incorrect otp'},
@@ -119,6 +140,21 @@ class UserbyId(generics.ListAPIView):
         pk=self.kwargs['pk']
         user=User.objects.filter(pk=pk)
         return user
+class UserbyName(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserListSerializer
+
+    def get_queryset(self):
+        pk=self.kwargs['pk']
+        user=User.objects.filter(fullName__icontains=pk)
+        return user
+
+class UserChangePassword(APIView):
+    def post(self, request):
+        user = User.objects.filter(Q(email=request.data['identifier']) | Q(phoneNumber=request.data['identifier']))[0]
+        user.set_password(request.data['password'])
+        user.save()
+        return Response({'detail': 'otp verified'}, status=status.HTTP_200_OK)
 
 class CurrentUser(APIView):
     permission_classes = [IsAuthenticated]
@@ -129,13 +165,19 @@ class CurrentUser(APIView):
 
 
 class UserIssueBasicDetails(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = User.objects.get(email=request.user)
         serializer = GroupViseIssueSerializer(user)
         return Response(serializer.data)
+class TeamUserIssueBasicDetails(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request,id):
+        user = User.objects.get(id=id)
+        serializer = GroupViseIssueSerializer(user)
+        return Response(serializer.data)
 
 class ChangeInformation(APIView):
     permission_classes = [IsAuthenticated]

@@ -29,6 +29,7 @@ class CommentCRUDVIEW(ListCreateAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
 class AttachmentCRUDVIEW(APIView):
+    permission_classes = [IsAuthenticated]
     serializer_class = AttachmentSerializer
 
     def post(self,request):
@@ -102,7 +103,6 @@ class IssueCRUDVIEW(APIView):
                     return Response({"error": "Something went wrong"}, status=status.HTTP_404_NOT_FOUND)
             return Response({"created": "issue Created successfully."}, status=status.HTTP_200_OK)
         else:
-            print(serializer.errors)
             return Response({"error": "Something went wrong"}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self,request,pk):
@@ -197,15 +197,14 @@ class UpdateIssueFields(APIView):
             teamArr.append(team["email"])
         for team in teamArr:
             to_email.append(team["email"])
-        # data = send_email(subject,message,to_email)
+        data = send_email(subject,message,to_email)
         return Response({"message": "Fields updated successfully."},status=status.HTTP_200_OK)
 
 class PostCommentIssue(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self,request,issue_id):
-        print(issue_id)
-        comment = Comment.objects.filter(issue_id=issue_id)
+        comment = Comment.objects.filter(issue_id=issue_id).order_by('created_date')
         serializer = CommentSerializer(comment,many=True)
         return Response({'success': serializer.data}, status=status.HTTP_200_OK)
 
@@ -215,7 +214,6 @@ class PostCommentIssue(APIView):
             "user_id":request.data['user_id'],
             "issue_id":int(request.data['issue_id']),
         }
-        print(data)
         serializer = CreateCommentatorSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -247,20 +245,15 @@ class UploadCsvIssues(APIView):
         serializer = IssueImportSerializer(data=data_list, many=True)
         if serializer.is_valid():
             serializer.save()
-            print('done')
             return Response({"success": "Data imported successfully"})
         else:
             return Response({"errors": serializer.errors})
-
-        # return Response({"success": "Data imported successfully"})
-        # df = pd.read_csv(file)
-        # data_list = df.to_dict(orient='records')
-        # serializer = IssueImportSerializer(data=data_list,many=True)
-        # if serializer.is_valid():
-        #     serializer.save()
-        #     return Response({"success": "Data imported successfully"})
-        # else:
-        #     return Response({"errors": serializer.errors})
+class IssueFilterByIdView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self,request,id):
+        issues=Issue.objects.filter(id__icontains=id)
+        serializer = ProjectIssueSerializer(issues,many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
 
 class IssueFilterView(APIView):
     permission_classes = [IsAuthenticated]
@@ -277,7 +270,7 @@ class IssueFilterView(APIView):
             issues = Issue.objects.filter(Q(project__key=keys) &
                                           Q(issue_type_id__in=type_list) &
                                           Q(assignee_id__in=user_list) &
-                                          Q(issue_summary__icontains=searchText))
+                                          (Q(issue_summary__icontains=searchText)|Q(project__title__icontains=searchText)|Q(id__icontains=searchText)))
             serializer = ProjectIssueSerializer(issues,many=True)
             return Response({"data": serializer.data})
         elif len(user) != 0 and len(issue_type) != 0:
@@ -292,19 +285,19 @@ class IssueFilterView(APIView):
             type_list = [int(x) for x in issue_type.split(',')]
             issues = Issue.objects.filter(Q(project__key=keys) &
                                           Q(issue_type_id__in=type_list) &
-                                          Q(issue_summary__icontains=searchText))
+                                          (Q(issue_summary__icontains=searchText)|Q(project__title__icontains=searchText)|Q(id__icontains=searchText)))
             serializer = ProjectIssueSerializer(issues,many=True)
             return Response({"data": serializer.data})
         elif len(searchText) != 0 and len(user) != 0:
             user_list = [x for x in user.split(',')]
             issues = Issue.objects.filter(Q(project__key=keys) &
                                           Q(assignee_id__in=user_list) &
-                                          Q(issue_summary__icontains=searchText))
+                                          (Q(issue_summary__icontains=searchText)|Q(project__title__icontains=searchText)|Q(id__icontains=searchText)))
             serializer = ProjectIssueSerializer(issues,many=True)
             return Response({"data": serializer.data})
         elif len(searchText):
             issues = Issue.objects.filter(Q(project__key=keys) &
-                                          Q(issue_summary__icontains=searchText))
+                                          (Q(issue_summary__icontains=searchText)|Q(project__title__icontains=searchText)|Q(id__icontains=searchText)))
             serializer = ProjectIssueSerializer(issues,many=True)
             return Response({"data": serializer.data})
         elif len(issue_type) != 0:
